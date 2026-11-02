@@ -23,7 +23,7 @@ cargo install cargo-lean
 ### From source
 
 ```bash
-git clone git@github.com:raphaelstolt/cargo-lean.git
+git clone git@github.com:lean-packages/cargo-lean.git
 cd cargo-lean
 cargo install --path .
 ```
@@ -194,5 +194,5 @@ This project is licensed under the MIT license. Please see [LICENSE.md](LICENSE.
 
 ## Related projects
 
-- [lean-package-validator](https://github.com/raphaelstolt/lean-package-validator) — The `PHP` equivalent.
-- [py-lean](https://github.com/raphaelstolt/py-lean) — The `Python` equivalent.
+- [lean-package-validator](https://github.com/lean-packages/lean-package-validator) — The `PHP` equivalent.
+- [py-lean](https://github.com/lean-packages/py-lean) — The `Python` equivalent.

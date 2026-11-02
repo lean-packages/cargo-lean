@@ -12,7 +12,7 @@ Thank you for your interest in contributing to `cargo-lean`.
 After cloning the repository, follow these steps to set up the project:
 
 ```bash
-git clone git@github.com:raphaelstolt/cargo-lean.git && cd cargo-lean
+git clone git@github.com:lean-packages/cargo-lean.git && cd cargo-lean
 ```
 
 Install Rust dependencies. Cargo automatically resolves and downloads all dependencies declared in `Cargo.toml`. Simply
