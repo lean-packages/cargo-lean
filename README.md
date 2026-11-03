@@ -195,3 +195,4 @@ This project is licensed under the MIT license. Please see [LICENSE.md](LICENSE.
 
 - [lean-package-validator](https://github.com/lean-packages/lean-package-validator) — The `PHP` equivalent.
 - [py-lean](https://github.com/lean-packages/py-lean) — The `Python` equivalent.
+- [js-lean](https://github.com/lean-packages/js-lean) — The `JavaScript` equivalent.
