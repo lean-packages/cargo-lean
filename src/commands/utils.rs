@@ -103,10 +103,10 @@ pub fn exists_in_repo_exact(manifest_dir: &Path, pattern: &str) -> bool {
 
     if let Ok(entries) = std::fs::read_dir(&search_dir) {
         for entry in entries.filter_map(|e| e.ok()) {
-            if let Some(entry_name) = entry.file_name().to_str() {
-                if entry_name == name {
-                    return true;
-                }
+            if let Some(entry_name) = entry.file_name().to_str()
+                && entry_name == name
+            {
+                return true;
             }
         }
     }
