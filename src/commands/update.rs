@@ -86,7 +86,7 @@ impl UpdateArgs {
         let mut new_excludes: Vec<String> = patterns
             .iter()
             .filter(|pattern| {
-                utils::exists_in_repo(manifest_dir, pattern.as_str())
+                utils::exists_in_repo_exact(manifest_dir, pattern.as_str())
                     && !gitignore::is_gitignored(pattern, &gitignore_entries)
             })
             .map(|s| s.to_string())
@@ -99,7 +99,7 @@ impl UpdateArgs {
             if !new_excludes
                 .iter()
                 .any(|n| n.eq_ignore_ascii_case(existing))
-                && utils::exists_in_repo(manifest_dir, existing)
+                && utils::exists_in_repo_exact(manifest_dir, existing)
                 && !gitignore::is_gitignored(existing, &gitignore_entries)
             {
                 new_excludes.push(existing.clone());
@@ -110,7 +110,7 @@ impl UpdateArgs {
         let gitignored: Vec<String> = patterns
             .iter()
             .filter(|pattern| {
-                utils::exists_in_repo(manifest_dir, pattern.as_str())
+                utils::exists_in_repo_exact(manifest_dir, pattern.as_str())
                     && gitignore::is_gitignored(pattern, &gitignore_entries)
             })
             .map(|s| s.to_string())

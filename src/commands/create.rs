@@ -84,7 +84,7 @@ impl CreateArgs {
         let to_add: Vec<String> = patterns
             .iter()
             .filter(|pattern| {
-                utils::exists_in_repo(manifest_dir, pattern.as_str())
+                utils::exists_in_repo_exact(manifest_dir, pattern.as_str())
                     && !utils::is_excluded(pattern, &current_excludes)
                     && !gitignore::is_gitignored(pattern, &gitignore_entries)
             })

@@ -344,6 +344,70 @@ edition = "2024"
         .success();
 }
 
+#[test]
+fn create_adds_only_existing_changelog_variant() {
+    // Regression test: on case-insensitive filesystems (e.g. macOS), both
+    // `CHANGELOG.md` and `changelog.md` would pass `Path::exists()` when only
+    // one file exists. Only the file whose name matches exactly should be added.
+    let dir = tempfile::tempdir().unwrap();
+    let cargo_toml = r#"[package]
+name = "test"
+version = "0.1.0"
+edition = "2024"
+"#;
+    // Create only CHANGELOG.md, not changelog.md
+    setup_test_dir(dir.path(), cargo_toml, &["CHANGELOG.md"]);
+
+    cmd()
+        .arg("create")
+        .arg("--manifest-path")
+        .arg(dir.path().join("Cargo.toml"))
+        .assert()
+        .success();
+
+    let content = fs::read_to_string(dir.path().join("Cargo.toml")).unwrap();
+    // CHANGELOG.md should be in the exclude list
+    assert!(
+        content.contains("CHANGELOG.md"),
+        "CHANGELOG.md should be excluded"
+    );
+    // changelog.md (lowercase) should NOT be in the exclude list
+    assert!(
+        !content.contains("changelog.md"),
+        "changelog.md should NOT be excluded — only CHANGELOG.md exists"
+    );
+}
+
+#[test]
+fn create_adds_only_existing_contributing_variant() {
+    // Same regression test for CONTRIBUTING.md / contributing.md pair
+    let dir = tempfile::tempdir().unwrap();
+    let cargo_toml = r#"[package]
+name = "test"
+version = "0.1.0"
+edition = "2024"
+"#;
+    // Create only contributing.md (lowercase)
+    setup_test_dir(dir.path(), cargo_toml, &["contributing.md"]);
+
+    cmd()
+        .arg("create")
+        .arg("--manifest-path")
+        .arg(dir.path().join("Cargo.toml"))
+        .assert()
+        .success();
+
+    let content = fs::read_to_string(dir.path().join("Cargo.toml")).unwrap();
+    assert!(
+        content.contains("contributing.md"),
+        "contributing.md should be excluded"
+    );
+    assert!(
+        !content.contains("CONTRIBUTING.md"),
+        "CONTRIBUTING.md should NOT be excluded — only contributing.md exists"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // UPDATE command tests
 // ---------------------------------------------------------------------------

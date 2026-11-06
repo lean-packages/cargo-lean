@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Case-sensitive file existence checks: On case-insensitive filesystems (e.g., macOS), both `CHANGELOG.md` and `changelog.md`
+  were incorrectly added to the exclude list when only one existed. File existence is now verified by reading directory
+  entries to ensure exact filename matches, preventing duplicate case-variant entries.
+
 ## [0.4.0] - 2026-10-31
 
 ### Added

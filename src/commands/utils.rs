@@ -72,15 +72,46 @@ pub fn normalize_pattern(pattern: &str) -> String {
     pattern.trim_end_matches('/').to_string()
 }
 
-/// Check if a pattern corresponds to an existing file or directory in the repo.
+/// Check if a pattern corresponds to an existing file or directory whose name
+/// matches the pattern **exactly** (case-sensitive).
 ///
-/// This handles both file patterns (e.g., `CHANGELOG.md`) and directory patterns
-/// (e.g., `tests/`, `benches/`). Trailing slashes are stripped before checking
-/// because `Path::exists()` may not handle them consistently.
-pub fn exists_in_repo(manifest_dir: &Path, pattern: &str) -> bool {
+/// On case-insensitive filesystems (e.g., macOS default), `Path::exists()` returns
+/// `true` for both `CHANGELOG.md` and `changelog.md` when only one exists.
+/// This function reads the actual directory entries to verify the filename matches
+/// the pattern exactly, preventing duplicate entries like both `CHANGELOG.md` and
+/// `changelog.md` from being added to the exclude list.
+pub fn exists_in_repo_exact(manifest_dir: &Path, pattern: &str) -> bool {
     let normalized = pattern.trim_end_matches('/');
+
+    // Quick check: if the path doesn't exist at all (even case-insensitively), skip.
     let path = manifest_dir.join(normalized);
-    path.exists()
+    if !path.exists() {
+        return false;
+    }
+
+    // For patterns without a parent (top-level entries), verify the exact filename
+    // by reading the directory entries.
+    let (parent, name) = match normalized.rsplit_once('/') {
+        Some((parent, name)) => (Some(parent), name),
+        None => (None, normalized),
+    };
+
+    let search_dir = match parent {
+        Some(p) => manifest_dir.join(p),
+        None => manifest_dir.to_path_buf(),
+    };
+
+    if let Ok(entries) = std::fs::read_dir(&search_dir) {
+        for entry in entries.filter_map(|e| e.ok()) {
+            if let Some(entry_name) = entry.file_name().to_str() {
+                if entry_name == name {
+                    return true;
+                }
+            }
+        }
+    }
+
+    false
 }
 
 /// Get the current exclude list from Cargo.toml
