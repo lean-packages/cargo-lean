@@ -19,6 +19,7 @@ pub const DEFAULT_EXCLUDE_PATTERNS: &[&str] = &[
     "docs/",
     "doc/",
     "target/",
+    "README.md",
     "CHANGELOG.md",
     "changelog.md",
     "CONTRIBUTING.md",
@@ -133,6 +134,28 @@ pub fn get_current_excludes(cargo_toml: &toml::Value) -> Vec<String> {
     }
 
     excludes
+}
+
+/// Get the `package.readme` value from Cargo.toml, if set.
+pub fn get_package_readme(cargo_toml: &toml::Value) -> Option<String> {
+    cargo_toml
+        .get("package")
+        .and_then(|p| p.get("readme"))
+        .and_then(|r| r.as_str())
+        .map(|s| s.to_string())
+}
+
+/// Check if a pattern is a README file that should never be in `package.exclude`.
+///
+/// README files belong in `package.readme`, not `package.exclude`.
+/// This check is case-insensitive to catch variants like `readme.md`.
+pub fn is_readme_pattern(pattern: &str) -> bool {
+    let normalized = pattern.trim_end_matches('/');
+    normalized.eq_ignore_ascii_case("README.md")
+        || normalized.eq_ignore_ascii_case("README")
+        || normalized.eq_ignore_ascii_case("README.txt")
+        || normalized.eq_ignore_ascii_case("README.rst")
+        || normalized.eq_ignore_ascii_case("readme.md")
 }
 
 /// Check if a pattern is already excluded in the current Cargo.toml

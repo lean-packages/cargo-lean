@@ -36,6 +36,12 @@ struct LintReport {
     gitignored: Vec<String>,
     /// Total number of recommended patterns checked
     total_patterns: usize,
+    /// README.md is incorrectly listed in package.exclude (should use package.readme instead)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    readme_in_exclude: Option<String>,
+    /// package.readme is not set but README.md exists
+    #[serde(skip_serializing_if = "Option::is_none")]
+    missing_readme_field: Option<String>,
 }
 
 impl LintArgs {
@@ -81,10 +87,12 @@ impl LintArgs {
         }
 
         // Find patterns that exist in the repo but are not excluded and not gitignored
+        // README files belong in package.readme, not package.exclude, so skip them here
         let existing_unexcluded: Vec<String> = patterns
             .iter()
             .filter(|pattern| {
-                utils::exists_in_repo_exact(manifest_dir, pattern.as_str())
+                !utils::is_readme_pattern(pattern)
+                    && utils::exists_in_repo_exact(manifest_dir, pattern.as_str())
                     && !utils::is_excluded(pattern, &current_excludes)
                     && !gitignore::is_gitignored(pattern, &gitignore_entries)
             })
@@ -111,7 +119,26 @@ impl LintArgs {
             .map(|s| s.to_string())
             .collect();
 
-        let valid = existing_unexcluded.is_empty();
+        // Check README.md specific rules:
+        // 1. README.md should NOT be in package.exclude (it should be in package.readme)
+        // 2. package.readme should be set if README.md exists
+        let readme_in_exclude = current_excludes
+            .iter()
+            .find(|e| e.eq_ignore_ascii_case("README.md"))
+            .cloned()
+            .map(|e| format!("README.md should not be in package.exclude (use package.readme = \"{}\" instead)", e));
+
+        let readme_exists = utils::exists_in_repo_exact(manifest_dir, "README.md");
+        let package_readme = utils::get_package_readme(&cargo_toml);
+        let missing_readme_field = if readme_exists && package_readme.is_none() {
+            Some("README.md exists but package.readme is not set in Cargo.toml".to_string())
+        } else {
+            None
+        };
+
+        let valid = existing_unexcluded.is_empty()
+            && readme_in_exclude.is_none()
+            && missing_readme_field.is_none();
 
         let report = LintReport {
             valid,
@@ -119,6 +146,8 @@ impl LintArgs {
             excluded: matched_patterns,
             gitignored: gitignored_only,
             total_patterns: patterns.len(),
+            readme_in_exclude,
+            missing_readme_field,
         };
 
         match self.format {
@@ -132,24 +161,40 @@ impl LintArgs {
                     if valid {
                         println!("No changes needed — Cargo.toml exclude list is complete.");
                     } else {
-                        println!(
-                            "--- Cargo.toml exclude list is missing {} artefact(s):",
-                            existing_unexcluded.len()
-                        );
-                        for item in &existing_unexcluded {
-                            println!("+ {}", item);
+                        if !existing_unexcluded.is_empty() {
+                            println!(
+                                "--- Cargo.toml exclude list is missing {} artefact(s):",
+                                existing_unexcluded.len()
+                            );
+                            for item in &existing_unexcluded {
+                                println!("+ {}", item);
+                            }
+                        }
+                        if let Some(msg) = &report.readme_in_exclude {
+                            println!("! {}", msg);
+                        }
+                        if let Some(msg) = &report.missing_readme_field {
+                            println!("! {}", msg);
                         }
                     }
                 } else {
                     if valid {
                         println!("✓ Cargo.toml exclude list is complete.");
                     } else {
-                        println!(
-                            "✗ Found {} artefact(s) that should be excluded but are not:",
-                            existing_unexcluded.len()
-                        );
-                        for item in &existing_unexcluded {
-                            println!("  - {}", item);
+                        if !existing_unexcluded.is_empty() {
+                            println!(
+                                "✗ Found {} artefact(s) that should be excluded but are not:",
+                                existing_unexcluded.len()
+                            );
+                            for item in &existing_unexcluded {
+                                println!("  - {}", item);
+                            }
+                        }
+                        if let Some(msg) = &report.readme_in_exclude {
+                            println!("✗ {}", msg);
+                        }
+                        if let Some(msg) = &report.missing_readme_field {
+                            println!("✗ {}", msg);
                         }
                     }
                 }

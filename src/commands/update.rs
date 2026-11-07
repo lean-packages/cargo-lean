@@ -51,8 +51,11 @@ impl UpdateArgs {
         let cargo_toml: toml::Value = toml::from_str(&cargo_toml_content)
             .with_context(|| format!("Failed to parse {}", manifest_path.display()))?;
 
-        // Get current exclude list
-        let current_excludes = utils::get_current_excludes(&cargo_toml);
+        // Get current exclude list, but never include README patterns — they belong in package.readme
+        let current_excludes: Vec<String> = utils::get_current_excludes(&cargo_toml)
+            .into_iter()
+            .filter(|e| !utils::is_readme_pattern(e))
+            .collect();
 
         // Read .gitignore entries
         // Use current directory when manifest_path has no parent (e.g., default "Cargo.toml")
@@ -83,10 +86,12 @@ impl UpdateArgs {
         }
 
         // Find patterns that exist in the repo and are not gitignored
+        // README files must never be in package.exclude; they belong in package.readme
         let mut new_excludes: Vec<String> = patterns
             .iter()
             .filter(|pattern| {
-                utils::exists_in_repo_exact(manifest_dir, pattern.as_str())
+                !utils::is_readme_pattern(pattern)
+                    && utils::exists_in_repo_exact(manifest_dir, pattern.as_str())
                     && !gitignore::is_gitignored(pattern, &gitignore_entries)
             })
             .map(|s| s.to_string())

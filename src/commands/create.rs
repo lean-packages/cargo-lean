@@ -81,10 +81,12 @@ impl CreateArgs {
         }
 
         // Find patterns that exist in the repo but are not excluded and not gitignored
+        // README files must never be added to package.exclude; they belong in package.readme
         let to_add: Vec<String> = patterns
             .iter()
             .filter(|pattern| {
-                utils::exists_in_repo_exact(manifest_dir, pattern.as_str())
+                !utils::is_readme_pattern(pattern)
+                    && utils::exists_in_repo_exact(manifest_dir, pattern.as_str())
                     && !utils::is_excluded(pattern, &current_excludes)
                     && !gitignore::is_gitignored(pattern, &gitignore_entries)
             })

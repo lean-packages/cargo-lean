@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `README.md` added to default exclude patterns: The lint command now checks that `README.md`
+  is not listed in `package.exclude` (it should be specified via `package.readme` instead)
+  and reports an error if it is. Additionally, the lint command verifies that `package.readme`
+  is set when `README.md` exists in the repository.
+
+### Fixed
+- `create` and `update` commands never add `README.md` to `package.exclude`: README files belong
+  in `package.readme`, not `package.exclude`. The `update` command will also remove any existing
+  `README.md` entry from the exclude list if present.
+
 ## [0.4.1] - 2026-11-06
 
 ### Fixed

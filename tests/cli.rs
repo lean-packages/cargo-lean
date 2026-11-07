@@ -223,6 +223,105 @@ edition = "2024"
         .stdout(predicate::str::contains("custom-artifact"));
 }
 
+#[test]
+fn lint_fails_when_readme_in_exclude() {
+    let dir = tempfile::tempdir().unwrap();
+    let cargo_toml = r#"[package]
+name = "test"
+version = "0.1.0"
+edition = "2024"
+readme = "README.md"
+exclude = ["README.md"]
+"#;
+    setup_test_dir(dir.path(), cargo_toml, &["README.md"]);
+
+    cmd()
+        .arg("lint")
+        .arg("--manifest-path")
+        .arg(dir.path().join("Cargo.toml"))
+        .arg("-p")
+        .arg("README.md")
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains(
+            "README.md should not be in package.exclude",
+        ));
+}
+
+#[test]
+fn lint_fails_when_readme_missing_readme_field() {
+    let dir = tempfile::tempdir().unwrap();
+    let cargo_toml = r#"[package]
+name = "test"
+version = "0.1.0"
+edition = "2024"
+"#;
+    setup_test_dir(dir.path(), cargo_toml, &["README.md"]);
+
+    cmd()
+        .arg("lint")
+        .arg("--manifest-path")
+        .arg(dir.path().join("Cargo.toml"))
+        .arg("-p")
+        .arg("README.md")
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains("package.readme is not set"));
+}
+
+#[test]
+fn lint_passes_when_readme_properly_configured() {
+    let dir = tempfile::tempdir().unwrap();
+    let cargo_toml = r#"[package]
+name = "test"
+version = "0.1.0"
+edition = "2024"
+readme = "README.md"
+"#;
+    setup_test_dir(dir.path(), cargo_toml, &["README.md"]);
+
+    // Use custom patterns so only README.md is checked.
+    // README.md exists, is not in exclude, and package.readme is set.
+    // Since it's not excluded and not gitignored, it will appear in the missing list,
+    // but the README-specific checks (readme_in_exclude, missing_readme_field) will pass.
+    // To make the overall lint pass, we gitignore README.md so it's not in the missing list.
+    setup_gitignore(dir.path(), "README.md\n");
+
+    cmd()
+        .arg("lint")
+        .arg("--manifest-path")
+        .arg(dir.path().join("Cargo.toml"))
+        .arg("-p")
+        .arg("README.md")
+        .assert()
+        .success();
+}
+
+#[test]
+fn lint_json_contains_readme_in_exclude() {
+    let dir = tempfile::tempdir().unwrap();
+    let cargo_toml = r#"[package]
+name = "test"
+version = "0.1.0"
+edition = "2024"
+readme = "README.md"
+exclude = ["README.md"]
+"#;
+    setup_test_dir(dir.path(), cargo_toml, &["README.md"]);
+
+    cmd()
+        .arg("lint")
+        .arg("--manifest-path")
+        .arg(dir.path().join("Cargo.toml"))
+        .arg("--format")
+        .arg("json")
+        .arg("-p")
+        .arg("README.md")
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains("readme_in_exclude"));
+}
+
 // ---------------------------------------------------------------------------
 // CREATE command tests
 // ---------------------------------------------------------------------------
@@ -1063,4 +1162,105 @@ edition = "2024"
         .failure()
         .stdout(predicate::str::contains("release.toml"))
         .stdout(predicate::str::contains(".hidden.toml"));
+}
+
+// ---------------------------------------------------------------------------
+// README.md exclusion tests (create and update must never add README.md)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn create_never_adds_readme_to_exclude() {
+    let dir = tempfile::tempdir().unwrap();
+    let cargo_toml = r#"[package]
+name = "test"
+version = "0.1.0"
+edition = "2024"
+"#;
+    // README.md and CHANGELOG.md both exist; only CHANGELOG.md should be excluded
+    setup_test_dir(dir.path(), cargo_toml, &["README.md", "CHANGELOG.md"]);
+
+    cmd()
+        .arg("create")
+        .arg("--manifest-path")
+        .arg(dir.path().join("Cargo.toml"))
+        .assert()
+        .success();
+
+    let content = fs::read_to_string(dir.path().join("Cargo.toml")).unwrap();
+    // CHANGELOG.md should be added to the exclude list
+    assert!(content.contains("CHANGELOG.md"));
+    // README.md should NOT be in the exclude list (check for the quoted exclude entry)
+    assert!(!content.contains("\"README.md\""));
+}
+
+#[test]
+fn create_never_adds_readme_even_with_custom_patterns() {
+    let dir = tempfile::tempdir().unwrap();
+    let cargo_toml = r#"[package]
+name = "test"
+version = "0.1.0"
+edition = "2024"
+"#;
+    setup_test_dir(dir.path(), cargo_toml, &["README.md", "custom-artifact"]);
+
+    // Explicitly pass README.md as a custom pattern — it should still be skipped
+    cmd()
+        .arg("create")
+        .arg("--manifest-path")
+        .arg(dir.path().join("Cargo.toml"))
+        .arg("-p")
+        .arg("README.md custom-artifact")
+        .assert()
+        .success();
+
+    let content = fs::read_to_string(dir.path().join("Cargo.toml")).unwrap();
+    assert!(content.contains("custom-artifact"));
+    assert!(!content.contains("README.md"));
+}
+
+#[test]
+fn update_never_adds_readme_to_exclude() {
+    let dir = tempfile::tempdir().unwrap();
+    let cargo_toml = r#"[package]
+name = "test"
+version = "0.1.0"
+edition = "2024"
+"#;
+    setup_test_dir(dir.path(), cargo_toml, &["README.md", "CHANGELOG.md"]);
+
+    cmd()
+        .arg("update")
+        .arg("--manifest-path")
+        .arg(dir.path().join("Cargo.toml"))
+        .assert()
+        .success();
+
+    let content = fs::read_to_string(dir.path().join("Cargo.toml")).unwrap();
+    assert!(content.contains("CHANGELOG.md"));
+    assert!(!content.contains("README.md"));
+}
+
+#[test]
+fn update_removes_readme_from_existing_exclude() {
+    let dir = tempfile::tempdir().unwrap();
+    let cargo_toml = r#"[package]
+name = "test"
+version = "0.1.0"
+edition = "2024"
+exclude = ["README.md", "CHANGELOG.md"]
+"#;
+    setup_test_dir(dir.path(), cargo_toml, &["README.md", "CHANGELOG.md"]);
+
+    cmd()
+        .arg("update")
+        .arg("--manifest-path")
+        .arg(dir.path().join("Cargo.toml"))
+        .assert()
+        .success();
+
+    let content = fs::read_to_string(dir.path().join("Cargo.toml")).unwrap();
+    // CHANGELOG.md should remain
+    assert!(content.contains("CHANGELOG.md"));
+    // README.md should be removed from the exclude list
+    assert!(!content.contains("README.md"));
 }
