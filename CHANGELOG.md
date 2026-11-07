@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-11-07
+
 ### Added
 - `README.md` added to default exclude patterns: The lint command now checks that `README.md`
   is not listed in `package.exclude` (it should be specified via `package.readme` instead)
