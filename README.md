@@ -196,3 +196,4 @@ This project is licensed under the MIT license. Please see [LICENSE.md](LICENSE.
 - [php-lean](https://github.com/lean-packages/php-lean) — The `PHP` counterpart.
 - [py-lean](https://github.com/lean-packages/py-lean) — The `Python` equivalent.
 - [js-lean](https://github.com/lean-packages/js-lean) — The `JavaScript` equivalent.
+- [zig-lean](https://github.com/lean-packages/zig-lean) — The `Zig` equivalent.
